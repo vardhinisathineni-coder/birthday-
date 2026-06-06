@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Make a Wish!</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #ffeef8 0%, #d4e5ff 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .container {
+            background: white;
+            padding: 42px;
+            border-radius: 28px;
+            box-shadow: 0 18px 50px rgba(0,0,0,0.15);
+            text-align: center;
+            max-width: 900px;
+            width: 96%;
+            transition: all 0.5s ease;
+        }
+        .hidden { display: none !important; }
+        
+        /* Input Styles */
+        input[type="text"], input[type="number"] {
+            width: 90%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #b2c9ff;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: #ff527b;
+        }
+        button {
+            background: #ff527b;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 15px;
+        }
+        button:hover { background: #ff2a5f; transform: scale(1.05); }
+
+        /* Countdown & Cake Styles */
+        #countdown { font-size: 4rem; color: #ff527b; font-weight: bold; }
+        .cake-emoji { font-size: 6rem; cursor: pointer; display: inline-block; transition: 0.3s; user-select: none; }
+        .cake-emoji:hover { transform: scale(1.1); }
+        
+        /* Photo Gallery Styles */
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-top: 26px;
+            align-items: stretch;
+        }
+        .photo-gallery img {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            border-radius: 18px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+            border: 3px solid rgba(255,255,255,0.95);
+            transition: transform 0.45s ease, box-shadow 0.45s ease, opacity 0.45s ease;
+            animation: photoEntrance 0.9s ease both;
+            transform-origin: center center;
+            will-change: transform, opacity;
+        }
+        .photo-gallery img:hover {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 18px 36px rgba(0,0,0,0.22);
+        }
+        .photo-slideshow {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 24px;
+            box-shadow: 0 16px 36px rgba(0,0,0,0.14);
+            background: #f0f0ff;
+        }
+        .photo-slideshow img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            z-index: 0;
+            pointer-events: none;
+            transform: scale(1.02);
+            transition: opacity 0.9s ease-in-out, transform 0.9s ease-in-out;
+            transform-origin: center center;
+        }
+        .photo-slideshow img.active {
+            opacity: 1;
+            z-index: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+        @keyframes photoEntrance {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .upload-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #6c63ff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .upload-button:hover {
+            background: #534eda;
+            transform: scale(1.03);
+        }
+        .hidden-file-input {
+            display: none;
+        }
+        .photo-placeholder {
+            padding: 18px;
+            background: #f5f3ff;
+            border-radius: 14px;
+            color: #5b51d8;
+            border: 2px dashed #d3cfff;
+            margin-top: 18px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="card">
+        <div id="step-questions">
+            <h2>🎈 Welcome to Your Birthday App!</h2>
+            <p>Before we begin, tell me a bit about today:</p>
+            <input type="text" id="nameInput" placeholder="What is your name?">
+            <input type="number" id="ageInput" placeholder="How old are you turning?">
+            <br>
+            <button onclick="startCelebration()">Next ✨</button>
+        </div>
+
+        <div id="step-wish" class="hidden">
+            <h2>Make a Wish, <span id="displayName"></span>!</h2>
+            <p>Close your eyes and make a secret wish in your mind. 🤫</p>
+            <p>Ready to light your <span id="displayAge"></span> candles?</p>
+            <button onclick="startTimer()">Yes, I'm Ready! 🕯️</button>
+        </div>
+
+        <div id="step-timer" class="hidden">
+            <h3>Lighting the candles in...</h3>
+            <div id="countdown">3</div>
+        </div>
+
+        <div id="step-cake" class="hidden">
+            <h2>🎂 The Candles are Lit! 🎂</h2>
+            <p>Take a deep breath and <strong>CLICK THE CAKE</strong> to blow them out!</p>
+            <div class="cake-emoji" id="cake" onclick="blowCandles()">🎂</div>
+        </div>
+
+        <div id="step-photo-questions" class="hidden">
+            <h2>Before Uploading Photos...</h2>
+            <p>Please answer these questions for a special memory page:</p>
+            <input type="text" id="photoTheme" placeholder="1. Where would you love to travel with me someday?">
+            <input type="text" id="photoMood" placeholder="2. What’s one thing you always wanted to tell me but never told?">
+            <input type="text" id="photoPeople" placeholder="3. How do you want to celebrate your birthday next year?">
+            <input type="text" id="photoQuestion4" placeholder="4. How long do you want to be with me?">
+            <input type="text" id="photoQuestion5" placeholder="5. If I came over right now, what would we be doing?">
+            <br>
+            <button onclick="showPhotoUpload()">Next: Upload Photos</button>
+        </div>
+
+        <div id="step-surprise" class="hidden">
+            <h2>🎉 HAPPY BIRTHDAY! 🎉</h2>
+            <p id="finalMessage"></p>
+            <p id="photoQuestionSummary" class="photo-placeholder" style="display:none; margin-top:10px;"></p>
+            <div id="photoSlideshow" class="photo-slideshow" aria-live="polite">
+                <img src="h1.jpeg" alt="Memory 1" class="active">
+                <img src="h2.jpeg" alt="Memory 2">
+                <img src="h3.jpeg" alt="Memory 3">
+                <img src="h4.jpeg" alt="Memory 4">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userName = "";
+        let userAge = "";
+
+        function startCelebration() {
+            userName = document.getElementById('nameInput').value.trim() || "Birthday Star";
+            userAge = document.getElementById('ageInput').value || "📦";
+            
+            document.getElementById('displayName').innerText = userName;
+            document.getElementById('displayAge').innerText = userAge;
+            
+            document.getElementById('step-questions').classList.add('hidden');
+            document.getElementById('step-wish').classList.remove('hidden');
+        }
+
+        function startTimer() {
+            document.getElementById('step-wish').classList.add('hidden');
+            document.getElementById('step-timer').classList.remove('hidden');
+            
+            let timeLeft = 3;
+            document.getElementById('countdown').innerText = timeLeft;
+
+            let timer = setInterval(function() {
+                timeLeft--;
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    document.getElementById('step-timer').classList.add('hidden');
+                    document.getElementById('step-cake').classList.remove('hidden');
+                } else {
+                    document.getElementById('countdown').innerText = timeLeft;
+                }
+            }, 1000);
+        }
+
+        function blowCandles() {
+            // Change the cake to a blown-out puff smoke effect
+            document.getElementById('cake').innerText = "💨✨";
+            
+            // Trigger a beautiful burst of confetti!
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+            
+            setTimeout(function() {
+                document.getElementById('step-cake').classList.add('hidden');
+                document.getElementById('photoTheme').value = '';
+                document.getElementById('photoMood').value = '';
+                document.getElementById('photoPeople').value = '';
+                document.getElementById('step-photo-questions').classList.remove('hidden');
+                
+                // Expand the card box dynamically to display the next page nicely
+                document.getElementById('card').style.maxWidth = "700px";
+            }, 800);
+        }
+
+        function showPhotoUpload() {
+            const q1 = document.getElementById('photoTheme').value.trim();
+            const q2 = document.getElementById('photoMood').value.trim();
+            const q3 = document.getElementById('photoPeople').value.trim();
+            const q4 = document.getElementById('photoQuestion4').value.trim();
+            const q5 = document.getElementById('photoQuestion5').value.trim();
+            const summary = document.getElementById('photoQuestionSummary');
+
+            const answers = [];
+            if (q1) answers.push(`Travel: ${q1}`);
+            if (q2) answers.push(`Secret: ${q2}`);
+            if (q3) answers.push(`Birthday: ${q3}`);
+            if (q4) answers.push(`Together: ${q4}`);
+            if (q5) answers.push(`Now: ${q5}`);
+
+            summary.textContent = answers.length ? `Your answers: ${answers.join(' · ')}` : 'Your photo gallery is ready!';
+            summary.style.display = 'block';
+
+            document.getElementById('step-photo-questions').classList.add('hidden');
+            document.getElementById('step-surprise').classList.remove('hidden');
+            initPhotoSlideshow();
+        }
+
+        function initPhotoSlideshow() {
+            const slides = document.querySelectorAll('#photoSlideshow img');
+            if (!slides.length) return;
+
+            let currentIndex = 0;
+            slides.forEach((slide, idx) => {
+                slide.classList.toggle('active', idx === 0);
+            });
+
+            if (window.photoSlideTimer) {
+                clearInterval(window.photoSlideTimer);
+            }
+
+            window.photoSlideTimer = setInterval(() => {
+                slides[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % slides.length;
+                slides[currentIndex].classList.add('active');
+            }, 5000);
+        }
+
+        function displayUploadedPhotos(files) {
+            const slideshow = document.getElementById('photoSlideshow');
+            const hint = document.getElementById('photoUploadHint');
+            if (!slideshow || !hint) return;
+
+            hint.style.display = 'none';
+            slideshow.innerHTML = '';
+
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/')).slice(0, 5);
+            if (imageFiles.length === 0) {
+                hint.innerText = 'Please upload valid image files.';
+                hint.style.display = 'block';
+                slideshow.style.display = 'none';
+                return;
+            }
+
+            slideshow.style.display = 'block';
+            let currentIndex = 0;
+            const slides = [];
+
+            imageFiles.forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.alt = 'h1.jpeg';
+                    if (idx === 0) img.classList.add('active');
+                    slideshow.appendChild(img);
+                    slides.push(img);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            if (window.photoSlideTimer) {
+                clearInterval(window.photoSlideTimer);
+            }
+
+            window.photoSlideTimer = setInterval(() => {
+                if (slides.length < 2) return;
+                slides[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % slides.length;
+                slides[currentIndex].classList.add('active');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
